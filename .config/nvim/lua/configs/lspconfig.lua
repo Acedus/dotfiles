@@ -1,89 +1,94 @@
 local on_attach = require("nvchad.configs.lspconfig").on_attach
+local on_init = require("nvchad.configs.lspconfig").on_init
 local capabilities = require("nvchad.configs.lspconfig").capabilities
 
-local lspconfig = require "lspconfig"
+local lspconfig = require("lspconfig")
 
-local servers = { "html", "cssls" }
+-- list of all servers configured.
+lspconfig.servers = {
+  "lua_ls",
+  "gopls",
+  "clangd",
+}
+
+-- list of servers configured with default config.
+local default_servers = {}
 
 -- lsps with default config
-for _, lsp in ipairs(servers) do
-  lspconfig[lsp].setup {
+for _, lsp in ipairs(default_servers) do
+  lspconfig[lsp].setup({
     on_attach = on_attach,
+    on_init = on_init,
     capabilities = capabilities,
-  }
+  })
 end
 
--- typescript
-lspconfig.tsserver.setup {
+lspconfig.lua_ls.setup({
   on_attach = on_attach,
+  on_init = on_init,
   capabilities = capabilities,
-}
 
--- gopls
-lspconfig.gopls.setup {
-  on_attach = on_attach,
-  capabilities = capabilities,
   settings = {
-    gopls = {
-      gofumpt = true,
-      codelenses = {
-        gc_details = false,
-        generate = true,
-        regenerate_cgo = true,
-        run_govulncheck = true,
-        test = true,
-        tidy = true,
-        upgrade_dependency = true,
-        vendor = true,
+    Lua = {
+      diagnostics = {
+        enable = false, -- Disable all diagnostics from lua_ls
+        -- globals = { "vim" },
       },
-      hints = {
-        assignVariableTypes = true,
-        compositeLiteralFields = true,
-        compositeLiteralTypes = true,
-        constantValues = true,
-        functionTypeParameters = true,
-        parameterNames = true,
-        rangeVariableTypes = true,
+      workspace = {
+        library = {
+          vim.fn.expand("$VIMRUNTIME/lua"),
+          vim.fn.expand("$VIMRUNTIME/lua/vim/lsp"),
+          vim.fn.stdpath("data") .. "/lazy/ui/nvchad_types",
+          vim.fn.stdpath("data") .. "/lazy/lazy.nvim/lua/lazy",
+          "${3rd}/love2d/library",
+        },
+        maxPreload = 100000,
+        preloadFileSize = 10000,
       },
-      analyses = {
-        fieldalignment = true,
-        nilness = true,
-        unusedparams = true,
-        unusedwrite = true,
-        useany = true,
-      },
-      usePlaceholders = true,
-      completeUnimported = true,
-      staticcheck = true,
-      directoryFilters = { "-.git", "-.vscode", "-.idea", "-.vscode-test", "-node_modules" },
-      semanticTokens = true,
     },
   },
-}
+})
 
--- Add the workaround for gopls semantic tokens
-local semantic_tokens_workaround = function(client, bufnr)
-  if not client.server_capabilities.semanticTokensProvider then
-    local semantic = client.config.capabilities.textDocument.semanticTokens
-    client.server_capabilities.semanticTokensProvider = {
-      full = true,
-      legend = {
-        tokenTypes = semantic.tokenTypes,
-        tokenModifiers = semantic.tokenModifiers,
-      },
-      range = true,
-    }
-  end
-end
-
--- Attach the workaround to gopls
-local gopls_on_attach = function(client, bufnr)
-  on_attach(client, bufnr)
-  semantic_tokens_workaround(client, bufnr)
-end
-
-lspconfig.gopls.setup {
-  on_attach = gopls_on_attach,
+lspconfig.gopls.setup({
+  on_attach = function(client, bufnr)
+    client.server_capabilities.documentFormattingProvider = false
+    client.server_capabilities.documentRangeFormattingProvider = false
+    on_attach(client, bufnr)
+  end,
+  on_init = on_init,
   capabilities = capabilities,
-  -- Your gopls settings are already included above
-}
+  cmd = { "gopls" },
+  filetypes = { "go", "gomod", "gotmpl", "gowork" },
+  root_dir = lspconfig.util.root_pattern("go.work", "go.mod", ".git"),
+  settings = {
+    gopls = {
+      analyses = {
+        unusedparams = true,
+      },
+      completeUnimported = true,
+      usePlaceholders = true,
+      staticcheck = true,
+    },
+  },
+})
+
+lspconfig.clangd.setup({
+  on_attach = on_attach,
+  on_init = on_init,
+  capabilities = {
+    offsetEncoding = { "utf-8", "utf-16" },
+    textDocument = {
+      completion = {
+        editsNearCursor = true
+      }
+    }
+  },
+  cmd = { "clangd" },
+  filetypes = { "c", "cpp", "objc", "objcpp" },
+  root_dir = lspconfig.util.root_pattern("compile_commands.json", ".git"),
+  settings = {
+    clangd = {
+      fallbackFlags = { "-std=c99" },
+    },
+  },
+})
