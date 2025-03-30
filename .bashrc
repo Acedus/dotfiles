@@ -12,6 +12,9 @@ then
 fi
 export PATH
 
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 # Uncomment the following line if you don't like systemctl's auto-paging feature:
 # export SYSTEMD_PAGER=
 
@@ -39,7 +42,7 @@ alias vi="nvim"
 alias vim="nvim"
 
 # zathura find
-alias zathura="zathura \$(~/.config/zathura/scripts/fzf-menu.sh)"
+alias zathura="zathura --fork \$(~/.config/zathura/scripts/fzf-menu.sh)"
 
 # export editor
 export EDITOR="nvim"
@@ -80,6 +83,8 @@ udiskie &
 # direnv
 
 eval "$(direnv hook bash)"
+
+# temp gcc run
 
 #alacritty hack for blur in ~/.zshrc
 if [[ $(ps --no-header -p $PPID -o comm) =~ '^alacritty$' ]]; then
