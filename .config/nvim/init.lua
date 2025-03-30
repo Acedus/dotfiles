@@ -38,8 +38,6 @@ vim.schedule(function()
   require "mappings"
 end)
 
-require('go').setup()
-
 vim.api.nvim_create_autocmd("FileType", {
   pattern = ".go",
   callback = function()
